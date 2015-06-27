@@ -1,0 +1,32 @@
+{% for site in sites %}
+[{{ site.domain_name }}]
+
+listen = /var/run/php5-fpm/{{ site.domain_name }}.socket
+listen.backlog = -1
+listen.owner = {{ site.username }}
+listen.group = www-data
+listen.mode = 0660
+
+; Unix user/group of processes
+user = {{ site.username }}
+group = www-data
+
+; Choose how the process manager will control the number of child processes.
+pm = dynamic
+pm.max_children = 75
+pm.start_servers = 10
+pm.min_spare_servers = 5
+pm.max_spare_servers = 20
+pm.max_requests = 500
+
+; Pass environment variables
+env[HOSTNAME] = $HOSTNAME
+env[PATH] = /usr/local/bin:/usr/bin:/bin
+env[TMP] = /var/www/{{ site.username }}/{{ site.domain_name }}/tmp
+env[TMPDIR] = /var/www/{{ site.username }}/{{ site.domain_name }}/tmp
+env[TEMP] = /var/www/{{ site.username }}/{{ site.domain_name }}/tmp
+
+; host-specific php ini settings here
+php_admin_value[open_basedir] = /var/www/{{ site.username }}/{{ site.domain_name }}/htdocs:/var/www/{{ site.username }}/{{ site.domain_name }}/tmp
+
+{% endfor %}

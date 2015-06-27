@@ -1,0 +1,66 @@
+---
+- name: users | add website users
+  user: name={{ item.username }} comment="{{ item.username }} web user" group=www-data state=present generate_ssh_key=yes createhome=yes uid="{{ item.uid }}" home="/var/www/{{ item.username }}"
+  with_items: "{{ sites }}"
+
+- name: users | generate website home directories (htdocs)
+  file: path="/var/www/{{ item.username }}/{{ item.domain_name }}/htdocs" owner="{{ item.username }}" group=www-data state=directory mode=0750
+  with_items: "{{ sites }}"
+
+- name: users | generate website home directories (data)
+  file: path="/var/www/{{ item.username }}/{{ item.domain_name }}/data" owner="{{ item.username }}" group=www-data state=directory mode=0750
+  with_items: "{{ sites }}"
+
+- name: users | generate website home directories (tmp)
+  file: path="/var/www/{{ item.username }}/{{ item.domain_name }}/tmp" owner="{{ item.username }}" group=www-data state=directory mode=0750
+  with_items: "{{ sites }}"
+
+- name: nginx | install nginx package
+  apt: pkg=nginx state=latest
+  
+- name: nginx | create ssl directory
+  file: path=/etc/nginx/ssl owner=root group=root state=directory mode=0700
+
+- name: nginx | copy ssl certificates
+  copy: src={{ item }} dest="/etc/nginx/ssl/{{ item | basename }}" owner=root group=root mode=0600
+  with_fileglob: 
+  - "{{ sites_ssl }}/*.crt"
+  - "{{ sites_ssl }}/*.key"
+  notify: restart nginx
+
+- name: nginx | setup nginx hosts configuration
+  template: src=nginx-sites.j2 dest=/etc/nginx/conf.d/nginx-sites.conf owner=root group=root mode=0644
+  notify: restart nginx
+
+- name: nginx | setup nginx default configuration
+  copy: src=nginx.conf dest=/etc/nginx/nginx.conf owner=root group=root mode=0644
+  notify: restart nginx
+
+- name: php | install php5 packages
+  apt: pkg={{ item }} state=latest
+  with_items:
+    - php5-fpm
+    - php5-cli
+    - php5-common
+    - php5-mysql
+    - php5-gd
+    - php5-cgi
+    - php5-mcrypt
+    - php5-curl
+    - php5-intl
+    - php5-memcache
+    - php5-pgsql
+    - php5-sqlite
+    - php5-xdebug
+    - php5-xmlrpc
+  
+- name: php | create php5-fpm directory
+  file: path=/var/run/php5-fpm owner=www-data group=www-data state=directory mode=0770
+
+- name: php | setup php5-fpm
+  template: src=fpm-setup.j2 dest=/etc/php5/fpm/pool.d/fpm-setup.conf owner=root group=root mode=0644
+  notify: restart php5-fpm
+
+- name: php | copy over php5-fpm php.ini
+  copy: src=php.production.ini dest=/etc/php5/fpm/php.ini
+  notify: restart php5-fpm

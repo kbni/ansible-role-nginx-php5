@@ -1,0 +1,77 @@
+{% for site in sites %}
+
+{% if site.ssl %}
+server {
+    server_name {{ site.domain_name }};
+    return 301 https://{{ site.domain_name }}$request_uri;
+    listen 80;
+}
+
+server {
+    listen 443;
+    ssl on;
+    ssl_certificate /etc/nginx/ssl/{{ site.domain_name }}.crt;
+    ssl_certificate_key /etc/nginx/ssl/{{ site.domain_name }}.key;
+    ssl_session_timeout 5m;
+{% else %}
+server {
+    listen 80;
+{% endif %}
+    server_name {{ site.domain_name }} www.{{ site.domain_name }};
+    root /var/www/{{ site.domain_name }}/htdocs;
+    access_log /var/log/nginx/{{ site.domain_name }}-access.log;
+    error_log /var/log/nginx/{{ site.domain_name }}-error.log;
+
+
+    location / {
+        try_files $uri $uri/ /index.php;
+    }
+
+{% if site.php %}
+    location ~ \.php$ {
+        try_files $uri =404;
+        fastcgi_split_path_info ^(.+\.php)(.*)$;
+        fastcgi_param SCRIPT_FILENAME $document_root$fastcgi_script_name;
+        fastcgi_pass unix:/var/run/php5-fpm/{{ site.domain_name }}.socket;   # forward to php-fpm via sockets
+        fastcgi_index index.php;
+        include fastcgi_params;
+    }
+
+    index index.php index.html index.htm;
+{% else %}
+    index index.html index.htm;
+{% endif %}
+
+    # if you don't like seeing all the errors for missing favicon.ico in root
+    location = /favicon.ico {
+        log_not_found off;
+        access_log off;
+        expires 7d;
+    }
+
+    # if you don't like seeing errors for a missing robots.txt in root
+    location = /robots.txt {
+        access_log off;
+        log_not_found off;
+    }
+
+    # this will prevent files like .htaccess .htpassword .secret etc from being served
+    # You can remove the log directives if you wish to
+    # log any attempts at a client trying to access a hidden file
+    location ~ /\. {
+        deny all;
+        access_log off;
+        log_not_found off;
+    }
+
+    # some gzip optimization magic
+    gzip on;
+    gzip_proxied any;
+    gzip_comp_level 5;
+    gzip_vary on;
+    gzip_static off;
+    gzip_types text/css text/plain application/json application/x-javascript text/xml application/xml application/xml+rss text/javascript application/javascript text/x-js;
+    gzip_min_length 1024;
+    gzip_disable "msie6";
+}
+{% endfor %}
