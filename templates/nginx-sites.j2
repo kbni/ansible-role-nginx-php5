@@ -18,7 +18,7 @@ server {
     listen 80;
 {% endif %}
     server_name {{ site.domain_name }} www.{{ site.domain_name }};
-    root /var/www/{{ site.domain_name }}/htdocs;
+    root /var/www/{{ site.username }}/{{ site.domain_name }}/htdocs;
     access_log /var/log/nginx/{{ site.domain_name }}-access.log;
     error_log /var/log/nginx/{{ site.domain_name }}-error.log;
 
