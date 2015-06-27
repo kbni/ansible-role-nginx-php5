@@ -1,0 +1,8 @@
+- hosts: webservers
+  vars:
+  - sites_ssl: files
+  - sites:
+    - { domain_name: 'kbni.net', username: 'kbnidotnet', uid: 80001, ssl: true, php: true }
+    - { domain_name: 'static.kbni.net', username: 'kbnidotnet', uid: 80001, ssl: true, php: false }
+  roles:
+    - .
