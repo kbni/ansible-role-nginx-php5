@@ -1,6 +1,6 @@
 {% for site in sites %}
 
-{% if site.ssl %}
+{%   if site.ssl | default(false) %}
 server {
     server_name {{ site.domain_name }};
     return 301 https://{{ site.domain_name }}$request_uri;
@@ -13,21 +13,28 @@ server {
     ssl_certificate /etc/nginx/ssl/{{ site.domain_name }}.crt;
     ssl_certificate_key /etc/nginx/ssl/{{ site.domain_name }}.key;
     ssl_session_timeout 5m;
-{% else %}
+{%   else %}
 server {
     listen 80;
-{% endif %}
+{%   endif %}
     server_name {{ site.domain_name }} www.{{ site.domain_name }};
     root /var/www/{{ site.username }}/{{ site.domain_name }}/htdocs;
     access_log /var/log/nginx/{{ site.domain_name }}-access.log;
     error_log /var/log/nginx/{{ site.domain_name }}-error.log;
 
-
+{%   if site.proxy_pass | default(false) %} 
+    location / {
+        proxy_set_header X-Real-IP $remote_addr;
+        proxy_set_header X-Forwarded-For $remote_addr;
+        proxy_set_header Host $host;
+        proxy_pass {{ site.proxy_pass }};
+    }
+{%   else %}
     location / {
         try_files $uri $uri/ /index.php;
     }
 
-{% if site.php %}
+{%     if site.php | default(false) %}
     location ~ \.php$ {
         try_files $uri =404;
         fastcgi_split_path_info ^(.+\.php)(.*)$;
@@ -38,10 +45,9 @@ server {
     }
 
     index index.php index.html index.htm;
-{% else %}
+{%     else %}
     index index.html index.htm;
-{% endif %}
-
+{%     endif %}
     # if you don't like seeing all the errors for missing favicon.ico in root
     location = /favicon.ico {
         log_not_found off;
@@ -73,5 +79,6 @@ server {
     gzip_types text/css text/plain application/json application/x-javascript text/xml application/xml application/xml+rss text/javascript application/javascript text/x-js;
     gzip_min_length 1024;
     gzip_disable "msie6";
+{%   endif %}
 }
 {% endfor %}

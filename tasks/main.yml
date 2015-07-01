@@ -1,4 +1,10 @@
 ---
+- name: nginx | install nginx package
+  apt: pkg=nginx state=latest
+  
+- name: nginx | create ssl directory
+  file: path=/etc/nginx/ssl owner=root group=root state=directory mode=0700
+
 - name: users | add website users
   user: name={{ item.username }} comment="{{ item.username }} web user" group=www-data state=present generate_ssh_key=yes createhome=yes uid="{{ item.uid }}" home="/var/www/{{ item.username }}"
   with_items: "{{ sites }}"
@@ -14,12 +20,6 @@
 - name: users | generate website home directories (tmp)
   file: path="/var/www/{{ item.username }}/{{ item.domain_name }}/tmp" owner="{{ item.username }}" group=www-data state=directory mode=0750
   with_items: "{{ sites }}"
-
-- name: nginx | install nginx package
-  apt: pkg=nginx state=latest
-  
-- name: nginx | create ssl directory
-  file: path=/etc/nginx/ssl owner=root group=root state=directory mode=0700
 
 - name: nginx | copy ssl certificates
   copy: src={{ item }} dest="/etc/nginx/ssl/{{ item | basename }}" owner=root group=root mode=0600
